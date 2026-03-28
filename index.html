@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DexQuery</title>
+    <meta
+      name="description"
+      content="A search-first Pokemon database for finding forms by abilities, types, moves and base stats."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="masthead">
+        <div class="masthead-mon">
+          <span class="masthead-orb"></span>
+        </div>
+
+        <div class="masthead-copy">
+          <h1>PokeFilter</h1>
+          <p class="masthead-text">
+            Search Pokemon like a database instead of a gallery. Build exact
+            filters, then scan the matches in a clean stat table.
+          </p>
+        </div>
+      </header>
+
+      <main class="workspace-stack">
+        <section class="workspace workspace-builder">
+          <div class="workspace-head">
+            <div>
+              <span class="panel-kicker">Search controls</span>
+              <h2>Pokemon Query Builder</h2>
+            </div>
+            <p class="panel-copy">
+              Keep the search strict by default, then loosen only the groups
+              you want with OR.
+            </p>
+          </div>
+
+          <div id="filter-panel"></div>
+        </section>
+
+        <section class="workspace workspace-overview">
+          <div class="overview-grid">
+            <div id="status-panel"></div>
+
+            <section class="reference-strip">
+              <span class="panel-kicker">Example query</span>
+              <h3>Target search</h3>
+              <p>
+                <code>intimidate</code> + <code>dark</code> +
+                <code>parting-shot</code> + <code>speed &gt;= 60</code>
+              </p>
+            </section>
+          </div>
+        </section>
+
+        <section class="workspace workspace-results">
+          <div class="workspace-head">
+            <div>
+              <span class="panel-kicker">Database view</span>
+              <h2>Matching Pokemon</h2>
+            </div>
+            <p class="panel-copy">
+              Results are listed in a table-style view so you can compare forms
+              quickly without jumping between cards.
+            </p>
+          </div>
+
+          <div id="results-panel"></div>
+        </section>
+      </main>
+    </div>
+
+    <noscript>
+      <div class="noscript-banner">
+        DexQuery needs JavaScript enabled in order to render the search UI.
+      </div>
+    </noscript>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

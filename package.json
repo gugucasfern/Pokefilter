@@ -1,0 +1,12 @@
+{
+  "name": "dexquery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Search-first Pokemon finder built with vanilla JavaScript and PokeAPI.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "test": "node tests/query-engine.test.mjs"
+  }
+}
