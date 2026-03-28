@@ -1,5 +1,6 @@
 import {
   COMPARISON_OPERATORS,
+  MOVE_LEARNSET_OPTIONS,
   STAT_OPTIONS,
 } from "../config.js";
 import { escapeHtml, formatStatLabel, humanizeKebabCase } from "../utils/normalize.js";
@@ -8,6 +9,7 @@ const groupLabels = {
   abilities: "Abilities",
   types: "Types",
   moves: "Moves",
+  eggGroups: "Egg Groups",
   stats: "Base Stats",
 };
 
@@ -15,12 +17,14 @@ const groupPlaceholders = {
   abilities: "Add an ability, for example intimidate",
   types: "Add a type, for example dark",
   moves: "Add a move, for example parting-shot",
+  eggGroups: "Add an egg group, for example field",
 };
 
 const groupDescriptions = {
   abilities: "Use OR when one of several abilities is acceptable.",
   types: "Keep AND for dual-type requirements. Switch to OR for wider matching.",
-  moves: "Moves are matched by learnability, regardless of how the Pokemon learns them.",
+  moves: "Moves are matched by the learnset version you choose, regardless of how the Pokemon learns them.",
+  eggGroups: "Egg groups are matched at species level, so every form of a matching species is included.",
 };
 
 const MAX_SUGGESTIONS = 6;
@@ -192,6 +196,12 @@ export function bindFilters(container, actions) {
 
   container.addEventListener("change", (event) => {
     const target = event.target;
+
+    if (target.dataset.setting === "move-version-group") {
+      actions.setMoveVersionGroup(target.value);
+      return;
+    }
+
     const ruleId = target.dataset.ruleId;
     const field = target.dataset.field;
 
@@ -210,6 +220,7 @@ export function renderFilters(container, state) {
     abilities: referenceData?.abilities || [],
     types: referenceData?.types || [],
     moves: referenceData?.moves || [],
+    eggGroups: referenceData?.eggGroups || [],
   };
 
   container.innerHTML = `
@@ -217,6 +228,7 @@ export function renderFilters(container, state) {
       ${renderTokenGroup("abilities", query, isDisabled)}
       ${renderTokenGroup("types", query, isDisabled)}
       ${renderTokenGroup("moves", query, isDisabled)}
+      ${renderTokenGroup("eggGroups", query, isDisabled)}
       ${renderStatsGroup(query, isDisabled)}
 
       <section class="filter-group">
@@ -283,6 +295,12 @@ function renderTokenGroup(group, query, isDisabled) {
       </div>
 
       ${
+        group === "moves"
+          ? renderMoveVersionGroupControl(query.moveVersionGroup, isDisabled)
+          : ""
+      }
+
+      ${
         values.length > 0
           ? `<div class="chips-row">${values
               .map((value) => renderChip(group, value, isDisabled))
@@ -290,6 +308,28 @@ function renderTokenGroup(group, query, isDisabled) {
           : `<div class="subtle-empty">No ${groupLabels[group].toLowerCase()} added yet.</div>`
       }
     </section>
+  `;
+}
+
+function renderMoveVersionGroupControl(selectedValue, isDisabled) {
+  return `
+    <div class="group-subcontrols">
+      <label class="field-label" for="move-version-group">Learnset version</label>
+      <select
+        id="move-version-group"
+        class="field-select learnset-select"
+        data-setting="move-version-group"
+        ${isDisabled ? "disabled" : ""}
+      >
+        ${MOVE_LEARNSET_OPTIONS.map(
+          (option) => `
+            <option value="${option.value}" ${selectedValue === option.value ? "selected" : ""}>
+              ${escapeHtml(option.label)}
+            </option>
+          `
+        ).join("")}
+      </select>
+    </div>
   `;
 }
 
@@ -571,4 +611,3 @@ function updateActiveSuggestion(panel) {
     suggestion.classList.toggle("is-active", index === activeIndex);
   });
 }
-

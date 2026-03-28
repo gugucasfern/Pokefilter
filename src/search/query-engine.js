@@ -1,10 +1,13 @@
 import { applyCollectionOperator, intersectSets } from "./set-logic.js";
 import { countActiveFilters, countActiveGroups, isFilledStatRule } from "./query-model.js";
+import { APP_CONFIG, getMoveLearnsetLabel } from "../config.js";
 import { formatStatLabel, humanizeKebabCase } from "../utils/normalize.js";
 
 const DEFAULT_BATCH_CONCURRENCY = 8;
 
 export async function runSearch(query, { api, signal, onProgress } = {}) {
+  const versionGroup = query.moveVersionGroup || APP_CONFIG.defaultVersionGroup;
+  const versionGroupLabel = getMoveLearnsetLabel(versionGroup);
   const preview = buildQueryPreview(query);
   const filterCount = countActiveFilters(query);
   const groupCount = countActiveGroups(query);
@@ -12,10 +15,10 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     .filter(isFilledStatRule)
     .map((rule) => ({ ...rule, value: Number(rule.value) }));
 
-  const activeSetGroups = [];
+  const activeFormSetGroups = [];
 
   if (query.abilities.length > 0) {
-    activeSetGroups.push(
+    activeFormSetGroups.push(
       resolveGroupSet({
         groupKey: "abilities",
         values: query.abilities,
@@ -29,7 +32,7 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
   }
 
   if (query.types.length > 0) {
-    activeSetGroups.push(
+    activeFormSetGroups.push(
       resolveGroupSet({
         groupKey: "types",
         values: query.types,
@@ -43,7 +46,7 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
   }
 
   if (query.moves.length > 0) {
-    activeSetGroups.push(
+    activeFormSetGroups.push(
       resolveGroupSet({
         groupKey: "moves",
         values: query.moves,
@@ -56,7 +59,21 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     );
   }
 
-  const resolvedGroups = await Promise.all(activeSetGroups);
+  if (query.eggGroups.length > 0) {
+    activeFormSetGroups.push(
+      resolveGroupSet({
+        groupKey: "egg-groups",
+        values: query.eggGroups,
+        operator: query.operators.eggGroups,
+        signal,
+        onProgress,
+        fetchResource: (name, options) => api.getEggGroup(name, options),
+        extractNames: (payload) => payload.pokemon_species.map((entry) => entry.name),
+      })
+    );
+  }
+
+  const resolvedGroups = await Promise.all(activeFormSetGroups);
   const invalidGroups = resolvedGroups.filter((group) => group.invalidValues.length > 0);
 
   if (invalidGroups.length > 0) {
@@ -76,10 +93,13 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     };
   }
 
+  const eggGroupGroup = resolvedGroups.find((group) => group.groupKey === "egg-groups");
+  const formGroups = resolvedGroups.filter((group) => group.groupKey !== "egg-groups");
+  const matchedSpeciesNameSet = eggGroupGroup ? eggGroupGroup.matches : null;
   let candidateNames = null;
 
-  if (resolvedGroups.length > 0) {
-    candidateNames = [...intersectSets(resolvedGroups.map((group) => group.matches))];
+  if (formGroups.length > 0) {
+    candidateNames = [...intersectSets(formGroups.map((group) => group.matches))];
 
     if (candidateNames.length === 0) {
       return {
@@ -94,13 +114,34 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         },
       };
     }
+  } else if (matchedSpeciesNameSet) {
+    candidateNames = await expandSpeciesNamesToPokemonNames([...matchedSpeciesNameSet], {
+      api,
+      signal,
+      onProgress,
+    });
+
+    if (candidateNames.length === 0) {
+      return {
+        results: [],
+        preview,
+        status: {
+          tone: "warning",
+          title: "No matching Pokemon found",
+          message: `The active ${groupCount} group search returned no playable forms for ${filterCount} filter${
+            filterCount === 1 ? "" : "s"
+          }.`,
+        },
+      };
+    }
   }
 
   if (!candidateNames) {
     onProgress?.({
       tone: "loading",
       title: "Loading Pokemon index",
-      message: "No ability, type or move filter was provided, so the search is expanding to all Pokemon forms before applying base stats.",
+      message:
+        "No form-level filter was provided, so the search is expanding to all Pokemon forms before applying egg group and stat rules.",
     });
 
     candidateNames = await listAllPokemonNames({ api, signal });
@@ -120,9 +161,30 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     onProgress,
   });
 
-  const normalizedResults = pokemonPayloads
-    .map(normalizePokemonResult)
-    .filter((pokemon) => matchesStatRules(pokemon.stats, activeStats, query.operators.stats))
+  const candidatePayloads = matchedSpeciesNameSet
+    ? pokemonPayloads.filter((payload) => matchedSpeciesNameSet.has(payload?.species?.name))
+    : pokemonPayloads;
+
+  const moveMatchedPayloads = candidatePayloads.filter((payload) =>
+    matchesMoveRules(payload, query.moves, query.operators.moves, versionGroup)
+  );
+
+  const statMatchedPayloads = moveMatchedPayloads.filter((payload) =>
+    matchesStatRules(extractPokemonStats(payload), activeStats, query.operators.stats)
+  );
+
+  const speciesPayloads = await fetchSpeciesBatch(
+    [...new Set(statMatchedPayloads.map((payload) => payload?.species?.name).filter(Boolean))],
+    {
+      api,
+      signal,
+      onProgress,
+    }
+  );
+  const speciesByName = new Map(speciesPayloads.map((payload) => [payload.name, payload]));
+
+  const normalizedResults = statMatchedPayloads
+    .map((payload) => normalizePokemonResult(payload, speciesByName.get(payload?.species?.name)))
     .sort(sortPokemonResults);
 
   if (normalizedResults.length === 0) {
@@ -133,9 +195,13 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         tone: "warning",
         title: "No matching Pokemon found",
         message:
-          activeStats.length > 0
-            ? "Candidates matched the ability, type or move filters, but none passed the selected base stat rules."
-            : "No Pokemon matched the current query.",
+          query.moves.length > 0 && activeStats.length > 0
+            ? `Candidates matched the broad filters, but none kept the selected moves in ${versionGroupLabel} while also passing the selected base stat rules.`
+            : query.moves.length > 0
+              ? `Candidates matched the broad filters, but none keep the selected moves in ${versionGroupLabel}.`
+              : activeStats.length > 0
+                ? "Candidates matched the ability, type, egg group or move filters, but none passed the selected base stat rules."
+                : "No Pokemon matched the current query.",
       },
     };
   }
@@ -146,10 +212,8 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     status: {
       tone: "info",
       title: "Search complete",
-      message: `Found ${normalizedResults.length} matching Pokemon form${
+      message: `Found ${normalizedResults.length} Pokemon result${
         normalizedResults.length === 1 ? "" : "s"
-      } from ${candidateNames.length} hydrated candidate${
-        candidateNames.length === 1 ? "" : "s"
       }.`,
     },
   };
@@ -177,6 +241,16 @@ export function buildQueryPreview(query) {
   if (query.moves.length > 0) {
     sections.push(
       `Moves (${query.operators.moves.toUpperCase()}): ${query.moves
+        .map(humanizeKebabCase)
+        .join(", ")} [${getMoveLearnsetLabel(
+          query.moveVersionGroup || APP_CONFIG.defaultVersionGroup
+        )}]`
+    );
+  }
+
+  if (query.eggGroups.length > 0) {
+    sections.push(
+      `Egg Groups (${query.operators.eggGroups.toUpperCase()}): ${query.eggGroups
         .map(humanizeKebabCase)
         .join(", ")}`
     );
@@ -301,10 +375,79 @@ async function fetchPokemonBatch(names, { api, signal, onProgress }) {
   return results.filter(Boolean);
 }
 
-function normalizePokemonResult(payload) {
+async function expandSpeciesNamesToPokemonNames(speciesNames, { api, signal, onProgress }) {
+  onProgress?.({
+    tone: "loading",
+    title: "Expanding egg group species",
+    message: `Resolving ${speciesNames.length} species into their available Pokemon forms.`,
+  });
+
+  const speciesPayloads = await fetchSpeciesBatch(speciesNames, {
+    api,
+    signal,
+    onProgress,
+    title: "Expanding egg group species",
+    progressNoun: "species",
+  });
+
+  const formNames = new Set();
+
+  for (const payload of speciesPayloads) {
+    for (const variety of payload.varieties || []) {
+      if (variety?.pokemon?.name) {
+        formNames.add(variety.pokemon.name);
+      }
+    }
+  }
+
+  return [...formNames].sort((left, right) => left.localeCompare(right));
+}
+
+async function fetchSpeciesBatch(
+  names,
+  { api, signal, onProgress, title = "Loading species data", progressNoun = "species" }
+) {
+  if (names.length === 0) {
+    return [];
+  }
+
+  const results = new Array(names.length);
+  const workerCount = Math.min(DEFAULT_BATCH_CONCURRENCY, names.length);
+  let nextIndex = 0;
+  let completed = 0;
+
+  async function worker() {
+    while (nextIndex < names.length) {
+      if (signal?.aborted) {
+        throw createAbortError();
+      }
+
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+
+      const payload = await api.getPokemonSpecies(names[currentIndex], { signal });
+      results[currentIndex] = payload;
+      completed += 1;
+
+      if (completed === names.length || completed % 10 === 0 || names.length <= 10) {
+        onProgress?.({
+          tone: "loading",
+          title,
+          message: `Fetched ${completed} of ${names.length} ${progressNoun}.`,
+        });
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results.filter(Boolean);
+}
+
+function normalizePokemonResult(payload, speciesPayload) {
   return {
     id: payload.id,
-    speciesId: parseSpeciesId(payload),
+    speciesId: speciesPayload?.id || parseSpeciesId(payload),
+    speciesName: payload?.species?.name || speciesPayload?.name || payload.name,
     name: payload.name,
     sprite:
       payload?.sprites?.other?.["official-artwork"]?.front_default ||
@@ -316,11 +459,16 @@ function normalizePokemonResult(payload) {
     abilities: [...payload.abilities]
       .sort((left, right) => left.slot - right.slot)
       .map((entry) => entry.ability.name),
-    stats: payload.stats.reduce((accumulator, entry) => {
-      accumulator[entry.stat.name] = entry.base_stat;
-      return accumulator;
-    }, {}),
+    eggGroups: [...(speciesPayload?.egg_groups || [])].map((entry) => entry.name),
+    stats: extractPokemonStats(payload),
   };
+}
+
+function extractPokemonStats(payload) {
+  return payload.stats.reduce((accumulator, entry) => {
+    accumulator[entry.stat.name] = entry.base_stat;
+    return accumulator;
+  }, {});
 }
 
 function parseSpeciesId(payload) {
@@ -342,6 +490,26 @@ function matchesStatRules(stats, rules, operator) {
   }
 
   const evaluations = rules.map((rule) => compareStat(stats[rule.stat], rule.operator, rule.value));
+  return operator === "or" ? evaluations.some(Boolean) : evaluations.every(Boolean);
+}
+
+function matchesMoveRules(payload, moveNames, operator, versionGroup) {
+  if (moveNames.length === 0) {
+    return true;
+  }
+
+  const learnableMoves = new Set(
+    (payload.moves || [])
+      .filter((entry) =>
+        (entry.version_group_details || []).some(
+          (detail) => detail?.version_group?.name === versionGroup
+        )
+      )
+      .map((entry) => entry?.move?.name)
+      .filter(Boolean)
+  );
+
+  const evaluations = moveNames.map((moveName) => learnableMoves.has(moveName));
   return operator === "or" ? evaluations.some(Boolean) : evaluations.every(Boolean);
 }
 

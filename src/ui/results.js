@@ -5,6 +5,7 @@ const sortableColumns = [
   { key: "name", label: "Pokemon" },
   { key: "types", label: "Types" },
   { key: "abilities", label: "Abilities" },
+  { key: "eggGroups", label: "Egg Groups" },
   { key: "hp", label: "HP" },
   { key: "attack", label: "Atk" },
   { key: "defense", label: "Def" },
@@ -90,7 +91,7 @@ export function renderResults(container, state) {
       <h3>Build a targeted search</h3>
       <p>
         Add abilities, moves, types or stat rules, then click Search to load a
-        proper database-style listing of the matching Pokemon.
+        proper database-style listing of the matching Pokemon, including egg groups.
       </p>
     </div>
   `;
@@ -146,6 +147,11 @@ function renderResultRow(result) {
             .join("")}
         </div>
       </td>
+      <td>
+        <div class="egg-group-stack">
+          ${renderEggGroupMarkup(result.eggGroups)}
+        </div>
+      </td>
       <td>${result.stats.hp ?? "-"}</td>
       <td>${result.stats.attack ?? "-"}</td>
       <td>${result.stats.defense ?? "-"}</td>
@@ -162,6 +168,22 @@ function renderTypeBadge(type) {
       ${escapeHtml(humanizeKebabCase(type))}
     </span>
   `;
+}
+
+function renderEggGroupMarkup(eggGroups = []) {
+  if (!eggGroups.length) {
+    return '<span class="egg-group-empty">-</span>';
+  }
+
+  return eggGroups
+    .map(
+      (eggGroup) => `
+        <span class="egg-group-badge">
+          ${escapeHtml(humanizeKebabCase(eggGroup))}
+        </span>
+      `
+    )
+    .join("");
 }
 
 function formatDexId(id) {
@@ -212,6 +234,10 @@ function getSortableValue(result, column) {
 
   if (column === "abilities") {
     return result.abilities.join("|");
+  }
+
+  if (column === "eggGroups") {
+    return result.eggGroups.join("|");
   }
 
   if (column && column in result.stats) {

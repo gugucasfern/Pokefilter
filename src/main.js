@@ -1,6 +1,12 @@
 import { createPokeApiClient } from "./api/pokeapi.js";
 import { createCache } from "./cache/cache.js";
-import { APP_CONFIG, SAMPLE_ABILITIES, SAMPLE_MOVES, TYPE_OPTIONS } from "./config.js";
+import {
+  APP_CONFIG,
+  SAMPLE_ABILITIES,
+  SAMPLE_EGG_GROUPS,
+  SAMPLE_MOVES,
+  TYPE_OPTIONS,
+} from "./config.js";
 import {
   createEmptyQuery,
   createStatRule,
@@ -55,8 +61,8 @@ const actions = {
 
     setStatus({
       tone: "idle",
-      title: "Filter added",
-      message: "Keep composing the query or click Search to validate the scaffold flow.",
+        title: "Filter added",
+      message: "Keep composing the query or click Search to run the full filtered lookup.",
     });
   },
 
@@ -64,6 +70,13 @@ const actions = {
     updateQuery((query) => ({
       ...query,
       [group]: query[group].filter((item) => item !== value),
+    }));
+  },
+
+  setMoveVersionGroup(moveVersionGroup) {
+    updateQuery((query) => ({
+      ...query,
+      moveVersionGroup,
     }));
   },
 
@@ -128,7 +141,7 @@ const actions = {
         tone: "warning",
         title: "Add at least one filter",
         message:
-          "DexQuery is designed as a targeted search screen, so the first scaffold does not render a full Pokemon list by default.",
+          "PokeFilter is designed as a targeted search screen, so it does not render a full Pokemon list by default.",
       });
       return;
     }
@@ -143,7 +156,7 @@ const actions = {
         tone: "loading",
         title: "Assembling search payload",
         message:
-          "The query model is being validated. Live PokeAPI execution will plug into this same action next.",
+          "The query model is being validated before the live PokeAPI search runs.",
       },
     }));
 
@@ -240,9 +253,9 @@ function createInitialState() {
     lastSearchPreview: "",
     status: {
       tone: "idle",
-      title: "Builder ready",
+        title: "Builder ready",
       message:
-        "The scaffold is in place. Add filters, switch group logic between AND and OR, and click Search to validate the flow.",
+        "Add filters for abilities, types, moves, egg groups, and stats, then click Search to query live Pokemon data.",
     },
     ui: {
       hasSearched: false,
@@ -251,6 +264,7 @@ function createInitialState() {
     },
     referenceData: {
       abilities: SAMPLE_ABILITIES,
+      eggGroups: SAMPLE_EGG_GROUPS,
       moves: SAMPLE_MOVES,
       types: TYPE_OPTIONS,
     },
@@ -325,8 +339,9 @@ function getNextSort(currentSort, column) {
 
 async function bootstrapReferenceData() {
   try {
-    const [abilityIndex, moveIndex] = await Promise.all([
+    const [abilityIndex, eggGroupIndex, moveIndex] = await Promise.all([
       api.listAbilities(),
+      api.listEggGroups(),
       api.listMoves(),
     ]);
 
@@ -335,6 +350,7 @@ async function bootstrapReferenceData() {
       referenceData: {
         ...state.referenceData,
         abilities: abilityIndex.results.map((entry) => entry.name),
+        eggGroups: eggGroupIndex.results.map((entry) => entry.name),
         moves: moveIndex.results.map((entry) => entry.name),
       },
     }));

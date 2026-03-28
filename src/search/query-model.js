@@ -1,9 +1,18 @@
-import { COMPARISON_OPERATORS, LOGICAL_OPERATORS, STAT_OPTIONS } from "../config.js";
+import {
+  APP_CONFIG,
+  COMPARISON_OPERATORS,
+  LOGICAL_OPERATORS,
+  MOVE_LEARNSET_OPTIONS,
+  STAT_OPTIONS,
+} from "../config.js";
 import { normalizeApiName } from "../utils/normalize.js";
 
 const allowedStats = new Set(STAT_OPTIONS.map((option) => option.value));
 const allowedLogicalOperators = new Set(LOGICAL_OPERATORS);
 const allowedComparisonOperators = new Set(COMPARISON_OPERATORS);
+const allowedMoveLearnsets = new Set(
+  MOVE_LEARNSET_OPTIONS.map((option) => option.value)
+);
 
 export function createRuleId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -28,11 +37,14 @@ export function createEmptyQuery() {
     abilities: [],
     types: [],
     moves: [],
+    moveVersionGroup: APP_CONFIG.defaultVersionGroup,
+    eggGroups: [],
     stats: [],
     operators: {
       abilities: "and",
       types: "and",
       moves: "and",
+      eggGroups: "and",
       stats: "and",
     },
   };
@@ -43,11 +55,14 @@ export function hydrateQueryDraft(draft = {}) {
     abilities: sanitizeTokenGroup(draft.abilities),
     types: sanitizeTokenGroup(draft.types),
     moves: sanitizeTokenGroup(draft.moves),
+    moveVersionGroup: sanitizeMoveLearnset(draft.moveVersionGroup),
+    eggGroups: sanitizeTokenGroup(draft.eggGroups),
     stats: sanitizeStatRules(draft.stats),
     operators: {
       abilities: sanitizeLogicalOperator(draft?.operators?.abilities),
       types: sanitizeLogicalOperator(draft?.operators?.types),
       moves: sanitizeLogicalOperator(draft?.operators?.moves),
+      eggGroups: sanitizeLogicalOperator(draft?.operators?.eggGroups),
       stats: sanitizeLogicalOperator(draft?.operators?.stats),
     },
   };
@@ -64,12 +79,13 @@ export function countActiveFilters(query) {
     query.abilities.length +
     query.types.length +
     query.moves.length +
+    query.eggGroups.length +
     filledStatRules.length
   );
 }
 
 export function countActiveGroups(query) {
-  return ["abilities", "types", "moves"].reduce(
+  return ["abilities", "types", "moves", "eggGroups"].reduce(
     (count, group) => count + (query[group].length > 0 ? 1 : 0),
     query.stats.some(isFilledStatRule) ? 1 : 0
   );
@@ -91,6 +107,10 @@ function sanitizeTokenGroup(values) {
 
 function sanitizeLogicalOperator(operator) {
   return allowedLogicalOperators.has(operator) ? operator : "and";
+}
+
+function sanitizeMoveLearnset(value) {
+  return allowedMoveLearnsets.has(value) ? value : APP_CONFIG.defaultVersionGroup;
 }
 
 function sanitizeStatRules(values) {
@@ -116,4 +136,3 @@ function sanitizeStatRules(values) {
     });
   });
 }
-

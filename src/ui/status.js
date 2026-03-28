@@ -35,8 +35,16 @@ export function renderStatus(container, state) {
           <span class="metric-value">${query.types.length}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Moves + stats</span>
-          <span class="metric-value">${query.moves.length + filledStatCount}</span>
+          <span class="metric-label">Moves</span>
+          <span class="metric-value">${query.moves.length}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Egg groups</span>
+          <span class="metric-value">${query.eggGroups.length}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Stat rules</span>
+          <span class="metric-value">${filledStatCount}</span>
         </div>
       </div>
 

@@ -278,6 +278,20 @@ code {
   align-items: center;
 }
 
+.group-subcontrols {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 0.7rem;
+}
+
+.field-label {
+  min-width: 9rem;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
 .token-input-shell {
   position: relative;
   flex: 1 1 auto;
@@ -393,7 +407,8 @@ code {
 }
 
 .chips-row,
-.type-stack {
+.type-stack,
+.egg-group-stack {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
@@ -437,6 +452,10 @@ code {
 
 .field-select {
   min-width: 10rem;
+}
+
+.learnset-select {
+  max-width: 18rem;
 }
 
 .field-select.operator-select,
@@ -491,7 +510,7 @@ code {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 0.7rem;
 }
 
@@ -529,7 +548,7 @@ code {
 
 .results-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   border-collapse: collapse;
 }
 
@@ -638,6 +657,27 @@ code {
   gap: 0.16rem;
 }
 
+.egg-group-badge,
+.egg-group-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.9rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(36, 83, 139, 0.1);
+  color: #24538b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.egg-group-empty {
+  min-width: 2rem;
+  background: rgba(47, 47, 49, 0.08);
+  color: #6e6a62;
+}
+
 .type-badge {
   display: inline-flex;
   align-items: center;
@@ -725,6 +765,7 @@ code {
     padding-top: 0.5rem;
   }
   .group-input-row,
+  .group-subcontrols,
   .stat-rule,
   .button-row {
     flex-direction: column;

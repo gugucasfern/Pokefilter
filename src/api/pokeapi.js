@@ -66,11 +66,17 @@ export function createPokeApiClient({ baseUrl, cache }) {
     getPokemon(name, options) {
       return request(`/pokemon/${name}/`, options);
     },
+    getPokemonSpecies(name, options) {
+      return request(`/pokemon-species/${name}/`, options);
+    },
     getAbility(name, options) {
       return request(`/ability/${name}/`, options);
     },
     getMove(name, options) {
       return request(`/move/${name}/`, options);
+    },
+    getEggGroup(name, options) {
+      return request(`/egg-group/${name}/`, options);
     },
     getType(name, options) {
       return request(`/type/${name}/`, options);
@@ -83,6 +89,9 @@ export function createPokeApiClient({ baseUrl, cache }) {
     },
     listMoves(limit = 2000, options) {
       return request(`/move/?limit=${limit}`, options);
+    },
+    listEggGroups(limit = 100, options) {
+      return request(`/egg-group/?limit=${limit}`, options);
     },
   };
 }
