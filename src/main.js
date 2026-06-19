@@ -23,14 +23,10 @@ import { normalizeApiName } from "./utils/normalize.js";
 const filterPanel = document.querySelector("#filter-panel");
 const statusPanel = document.querySelector("#status-panel");
 const resultsPanel = document.querySelector("#results-panel");
-const REVIEW_HASH = "#teste";
 
 if (!filterPanel || !statusPanel || !resultsPanel) {
   throw new Error("App root elements are missing from index.html.");
 }
-
-syncUiVariant();
-window.addEventListener("hashchange", syncUiVariant);
 
 const cache = createCache({
   namespace: APP_CONFIG.cacheNamespace,
@@ -318,12 +314,6 @@ function renderApp(state) {
   renderFilters(filterPanel, state);
   renderStatus(statusPanel, state);
   renderResults(resultsPanel, state);
-}
-
-function syncUiVariant() {
-  const isReviewVariant = window.location.hash.toLowerCase() === REVIEW_HASH;
-
-  document.body.dataset.variant = isReviewVariant ? "review" : "default";
 }
 
 function createDefaultSort() {
