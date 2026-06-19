@@ -2,7 +2,7 @@ export const APP_CONFIG = {
   appName: "DexQuery",
   pokeApiBaseUrl: "https://pokeapi.co/api/v2",
   cacheNamespace: "dexquery",
-  cacheVersion: "v2",
+  cacheVersion: "v3",
   draftStorageKey: "dexquery:query-draft",
   defaultVersionGroup: "scarlet-violet",
 };
@@ -65,6 +65,7 @@ export const MOVE_LEARNSET_OPTIONS = [
   { value: "sun-moon", label: "Gen 7 (Sun/Moon)" },
   { value: "sword-shield", label: "Gen 8 (Sword/Shield)" },
   { value: "scarlet-violet", label: "Gen 9 (Scarlet/Violet)" },
+  { value: "pokemon-champions", label: "Pokemon Champions (SV baseline)" },
 ];
 
 export function getMoveLearnsetLabel(value) {

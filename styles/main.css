@@ -739,6 +739,189 @@ code {
   border: 0;
 }
 
+body[data-variant="review"] {
+  color-scheme: light;
+  --bg-page: #f2f4f5;
+  --bg-page-bottom: #eef1f2;
+  --bg-panel: #ffffff;
+  --bg-soft: #f6f7f8;
+  --bg-dark: #f7f8f9;
+  --bg-dark-soft: #eef1f3;
+  --line: #d9dfe4;
+  --line-strong: #c1c9d0;
+  --text: #182026;
+  --text-soft: #5d6872;
+  --text-faint: #7d8892;
+  --accent: #2a6fdb;
+  --accent-strong: #184ea1;
+  --accent-soft: rgba(42, 111, 219, 0.1);
+  --shadow: 0 12px 28px rgba(18, 24, 31, 0.08);
+  --radius-xl: 20px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --font-display: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+body[data-variant="review"] {
+  background:
+    radial-gradient(circle at top, rgba(42, 111, 219, 0.08), transparent 28rem),
+    linear-gradient(180deg, #fafbfc 0%, #f0f3f5 100%);
+}
+
+body[data-variant="review"] .masthead {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding: 1.25rem 1.35rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+
+body[data-variant="review"] .masthead-mon,
+body[data-variant="review"] .masthead-orb {
+  display: none;
+}
+
+body[data-variant="review"] .masthead::after {
+  height: 0.22rem;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
+}
+
+body[data-variant="review"] .masthead h1,
+body[data-variant="review"] .workspace h2,
+body[data-variant="review"] .reference-strip h3,
+body[data-variant="review"] .status-title,
+body[data-variant="review"] .query-preview h3,
+body[data-variant="review"] .empty-state h3,
+body[data-variant="review"] .loading-state h3,
+body[data-variant="review"] .group-head h3,
+body[data-variant="review"] .reference-strip h3 {
+  font-family: var(--font-display);
+  text-shadow: none;
+  letter-spacing: 0;
+}
+
+body[data-variant="review"] .masthead h1 {
+  margin-top: 0;
+  font-size: clamp(1.65rem, 2.8vw, 2.7rem);
+  color: var(--text);
+}
+
+body[data-variant="review"] .masthead-text,
+body[data-variant="review"] .panel-copy,
+body[data-variant="review"] .query-preview p,
+body[data-variant="review"] .empty-state p,
+body[data-variant="review"] .loading-state p,
+body[data-variant="review"] .reference-strip p {
+  color: var(--text-soft);
+}
+
+body[data-variant="review"] .group-head p {
+  display: none;
+}
+
+body[data-variant="review"] .workspace {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+
+body[data-variant="review"] .status-card,
+body[data-variant="review"] .reference-strip,
+body[data-variant="review"] .query-preview,
+body[data-variant="review"] .empty-state,
+body[data-variant="review"] .loading-state {
+  background: #fff;
+  border-color: var(--line);
+}
+
+body[data-variant="review"] .filter-group {
+  padding: 1rem 0;
+}
+
+body[data-variant="review"] .group-head {
+  grid-template-columns: minmax(11rem, 13rem) minmax(0, 1fr) auto;
+}
+
+body[data-variant="review"] .operator-toggle {
+  background: #edf1f4;
+  border-color: var(--line);
+}
+
+body[data-variant="review"] .operator-button {
+  color: var(--text-soft);
+}
+
+body[data-variant="review"] .operator-button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+body[data-variant="review"] .token-input,
+body[data-variant="review"] .field-select,
+body[data-variant="review"] .field-input {
+  border-color: #cfd7de;
+  background: #fff;
+}
+
+body[data-variant="review"] .token-input:focus-visible,
+body[data-variant="review"] .field-select:focus-visible,
+body[data-variant="review"] .field-input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(42, 111, 219, 0.12);
+}
+
+body[data-variant="review"] .autocomplete-panel {
+  background: #1f2730;
+}
+
+body[data-variant="review"] .ghost-button,
+body[data-variant="review"] .secondary-button {
+  background: #eef2f5;
+  color: var(--text);
+}
+
+body[data-variant="review"] .primary-button {
+  background: var(--accent);
+}
+
+body[data-variant="review"] .chip {
+  background: rgba(42, 111, 219, 0.08);
+  color: var(--accent-strong);
+}
+
+body[data-variant="review"] .chip button {
+  color: var(--accent-strong);
+}
+
+body[data-variant="review"] .stat-rule {
+  background: #f7f9fb;
+  border-color: #dbe2e8;
+}
+
+body[data-variant="review"] .sort-button.is-active,
+body[data-variant="review"] .pokemon-cell-copy strong {
+  color: var(--accent-strong);
+}
+
+body[data-variant="review"] .results-table th {
+  background: linear-gradient(180deg, #f4f7f9 0%, #e8edf1 100%);
+  border-bottom-color: #cfd7de;
+}
+
+body[data-variant="review"] .results-table-shell {
+  background: #fff;
+  border-color: var(--line);
+}
+
+body[data-variant="review"] .results-table tbody tr:nth-child(even) {
+  background: #f8fafb;
+}
+
+body[data-variant="review"] .results-table tbody tr:hover {
+  background: rgba(42, 111, 219, 0.05);
+}
+
 @media (max-width: 1024px) {
   .masthead {
     grid-template-columns: 1fr;
@@ -770,6 +953,10 @@ code {
   .button-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  body[data-variant="review"] .group-head {
+    grid-template-columns: 1fr;
   }
 
   .field-select,

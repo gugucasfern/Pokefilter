@@ -434,6 +434,192 @@ test("allows changing the move learnset version group", async () => {
   ]);
 });
 
+test("uses scarlet-violet learnsets as the Pokemon Champions baseline", async () => {
+  const api = createMockApi({
+    moves: {
+      scald: ["slowbro"],
+    },
+    pokemon: {
+      slowbro: createPokemonPayload({
+        id: 80,
+        name: "slowbro",
+        types: ["water", "psychic"],
+        abilities: ["oblivious", "own-tempo"],
+        moves: {
+          scald: ["scarlet-violet"],
+        },
+        stats: defaultStats({ defense: 110 }),
+      }),
+    },
+    species: {
+      slowbro: createSpeciesPayload({
+        id: 80,
+        name: "slowbro",
+        eggGroups: ["monster", "water-1"],
+        varieties: ["slowbro"],
+      }),
+    },
+  });
+
+  const result = await runSearch(
+    {
+      abilities: [],
+      types: [],
+      moves: ["scald"],
+      moveVersionGroup: "pokemon-champions",
+      eggGroups: [],
+      stats: [],
+      operators: {
+        abilities: "and",
+        types: "and",
+        moves: "and",
+        eggGroups: "and",
+        stats: "and",
+      },
+    },
+    { api }
+  );
+
+  assert.equal(result.status.tone, "info");
+  assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["slowbro"]);
+});
+
+test("applies Pokemon Champions move learnset overrides", async () => {
+  const api = createMockApi({
+    moves: {
+      scald: ["slowbro"],
+    },
+    pokemon: {
+      toxapex: createPokemonPayload({
+        id: 748,
+        name: "toxapex",
+        types: ["poison", "water"],
+        abilities: ["merciless", "limber"],
+        moves: {
+          scald: ["sword-shield"],
+        },
+        stats: defaultStats({ defense: 152 }),
+      }),
+      slowbro: createPokemonPayload({
+        id: 80,
+        name: "slowbro",
+        types: ["water", "psychic"],
+        abilities: ["oblivious", "own-tempo"],
+        moves: {
+          scald: ["scarlet-violet"],
+        },
+        stats: defaultStats({ defense: 110 }),
+      }),
+    },
+    species: {
+      toxapex: createSpeciesPayload({
+        id: 748,
+        name: "toxapex",
+        eggGroups: ["water-1"],
+        varieties: ["toxapex"],
+      }),
+      slowbro: createSpeciesPayload({
+        id: 80,
+        name: "slowbro",
+        eggGroups: ["monster", "water-1"],
+        varieties: ["slowbro"],
+      }),
+    },
+  });
+
+  const result = await runSearch(
+    {
+      abilities: [],
+      types: [],
+      moves: ["scald"],
+      moveVersionGroup: "pokemon-champions",
+      eggGroups: [],
+      stats: [],
+      operators: {
+        abilities: "and",
+        types: "and",
+        moves: "and",
+        eggGroups: "and",
+        stats: "and",
+      },
+    },
+    {
+      api,
+      moveLearnsets: {
+        "pokemon-champions": {
+          baseVersionGroup: "scarlet-violet",
+          moveOverrides: {
+            scald: {
+              add: ["toxapex"],
+              remove: ["slowbro"],
+            },
+          },
+        },
+      },
+    }
+  );
+
+  assert.equal(result.status.tone, "info");
+  assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["toxapex"]);
+});
+
+test("matches Pokemon Champions custom forms across ability, type and move filters", async () => {
+  const api = createMockApi({
+    abilities: {
+      "mold-breaker": [],
+    },
+    types: {
+      fire: ["emboar"],
+    },
+    moves: {
+      "hammer-arm": ["emboar"],
+    },
+    pokemon: {
+      emboar: createPokemonPayload({
+        id: 500,
+        name: "emboar",
+        types: ["fire", "fighting"],
+        abilities: ["blaze", "reckless"],
+        moves: {
+          "hammer-arm": ["scarlet-violet"],
+        },
+        stats: defaultStats({ hp: 110, attack: 123, speed: 65 }),
+      }),
+    },
+    species: {
+      emboar: createSpeciesPayload({
+        id: 500,
+        name: "emboar",
+        eggGroups: ["field"],
+        varieties: ["emboar"],
+      }),
+    },
+  });
+
+  const result = await runSearch(
+    {
+      abilities: ["mold-breaker"],
+      types: ["fire"],
+      moves: ["hammer-arm"],
+      moveVersionGroup: "pokemon-champions",
+      eggGroups: [],
+      stats: [],
+      operators: {
+        abilities: "and",
+        types: "and",
+        moves: "and",
+        eggGroups: "and",
+        stats: "and",
+      },
+    },
+    { api }
+  );
+
+  assert.equal(result.status.tone, "info");
+  assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["mega-emboar"]);
+  assert.deepEqual(result.results[0].abilities, ["mold-breaker"]);
+});
+
 function createMockApi({
   abilities = {},
   types = {},

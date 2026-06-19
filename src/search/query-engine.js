@@ -1,11 +1,25 @@
 import { applyCollectionOperator, intersectSets } from "./set-logic.js";
 import { countActiveFilters, countActiveGroups, isFilledStatRule } from "./query-model.js";
+import {
+  collectLearnableMoves,
+  getCustomMoveCandidates,
+} from "./move-learnsets.js";
+import {
+  getCustomNamesForAbility,
+  getCustomNamesForMove,
+  getCustomNamesForType,
+  getCustomPokemonNames,
+  resolveCustomPokemonPayload,
+} from "./custom-pokemon.js";
 import { APP_CONFIG, getMoveLearnsetLabel } from "../config.js";
 import { formatStatLabel, humanizeKebabCase } from "../utils/normalize.js";
 
 const DEFAULT_BATCH_CONCURRENCY = 8;
 
-export async function runSearch(query, { api, signal, onProgress } = {}) {
+export async function runSearch(
+  query,
+  { api, signal, onProgress, moveLearnsets, customPokemonForms } = {}
+) {
   const versionGroup = query.moveVersionGroup || APP_CONFIG.defaultVersionGroup;
   const versionGroupLabel = getMoveLearnsetLabel(versionGroup);
   const preview = buildQueryPreview(query);
@@ -26,7 +40,10 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         signal,
         onProgress,
         fetchResource: (name, options) => api.getAbility(name, options),
-        extractNames: (payload) => payload.pokemon.map((entry) => entry.pokemon.name),
+        extractNames: (payload, abilityName) => [
+          ...payload.pokemon.map((entry) => entry.pokemon.name),
+          ...getCustomNamesForAbility(abilityName, versionGroup, customPokemonForms),
+        ],
       })
     );
   }
@@ -40,7 +57,10 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         signal,
         onProgress,
         fetchResource: (name, options) => api.getType(name, options),
-        extractNames: (payload) => payload.pokemon.map((entry) => entry.pokemon.name),
+        extractNames: (payload, typeName) => [
+          ...payload.pokemon.map((entry) => entry.pokemon.name),
+          ...getCustomNamesForType(typeName, versionGroup, customPokemonForms),
+        ],
       })
     );
   }
@@ -54,7 +74,32 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         signal,
         onProgress,
         fetchResource: (name, options) => api.getMove(name, options),
-        extractNames: (payload) => payload.learned_by_pokemon.map((entry) => entry.name),
+        extractNames: (payload, moveName) => {
+          const customCandidates = getCustomMoveCandidates(
+            moveName,
+            versionGroup,
+            moveLearnsets
+          );
+          const names = new Set(payload.learned_by_pokemon.map((entry) => entry.name));
+
+          for (const name of getCustomNamesForMove(
+            moveName,
+            versionGroup,
+            customPokemonForms
+          )) {
+            names.add(name);
+          }
+
+          for (const name of customCandidates.added) {
+            names.add(name);
+          }
+
+          for (const name of customCandidates.removed) {
+            names.delete(name);
+          }
+
+          return [...names];
+        },
       })
     );
   }
@@ -144,7 +189,12 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
         "No form-level filter was provided, so the search is expanding to all Pokemon forms before applying egg group and stat rules.",
     });
 
-    candidateNames = await listAllPokemonNames({ api, signal });
+    candidateNames = await listAllPokemonNames({
+      api,
+      signal,
+      versionGroup,
+      customPokemonForms,
+    });
   }
 
   onProgress?.({
@@ -159,6 +209,8 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     api,
     signal,
     onProgress,
+    versionGroup,
+    customPokemonForms,
   });
 
   const candidatePayloads = matchedSpeciesNameSet
@@ -166,7 +218,7 @@ export async function runSearch(query, { api, signal, onProgress } = {}) {
     : pokemonPayloads;
 
   const moveMatchedPayloads = candidatePayloads.filter((payload) =>
-    matchesMoveRules(payload, query.moves, query.operators.moves, versionGroup)
+    matchesMoveRules(payload, query.moves, query.operators.moves, versionGroup, moveLearnsets)
   );
 
   const statMatchedPayloads = moveMatchedPayloads.filter((payload) =>
@@ -294,7 +346,7 @@ async function resolveGroupSet({
         return {
           ok: true,
           value,
-          matches: new Set(extractNames(payload)),
+          matches: new Set(extractNames(payload, value)),
         };
       } catch (error) {
         if (error?.name === "AbortError") {
@@ -334,13 +386,19 @@ async function resolveGroupSet({
   };
 }
 
-async function listAllPokemonNames({ api, signal }) {
+async function listAllPokemonNames({ api, signal, versionGroup, customPokemonForms }) {
   const summary = await api.listPokemon(1, { signal });
   const completeIndex = await api.listPokemon(summary.count, { signal });
-  return completeIndex.results.map((entry) => entry.name);
+  return [
+    ...completeIndex.results.map((entry) => entry.name),
+    ...getCustomPokemonNames(versionGroup, customPokemonForms),
+  ];
 }
 
-async function fetchPokemonBatch(names, { api, signal, onProgress }) {
+async function fetchPokemonBatch(
+  names,
+  { api, signal, onProgress, versionGroup, customPokemonForms }
+) {
   const results = new Array(names.length);
   const workerCount = Math.min(DEFAULT_BATCH_CONCURRENCY, names.length);
   let nextIndex = 0;
@@ -355,7 +413,11 @@ async function fetchPokemonBatch(names, { api, signal, onProgress }) {
       const currentIndex = nextIndex;
       nextIndex += 1;
 
-      const payload = await api.getPokemon(names[currentIndex], { signal });
+      const payload =
+        (await resolveCustomPokemonPayload(names[currentIndex], versionGroup, {
+          api,
+          customPokemonForms,
+        })) || (await api.getPokemon(names[currentIndex], { signal }));
       results[currentIndex] = payload;
       completed += 1;
 
@@ -493,21 +555,12 @@ function matchesStatRules(stats, rules, operator) {
   return operator === "or" ? evaluations.some(Boolean) : evaluations.every(Boolean);
 }
 
-function matchesMoveRules(payload, moveNames, operator, versionGroup) {
+function matchesMoveRules(payload, moveNames, operator, versionGroup, moveLearnsets) {
   if (moveNames.length === 0) {
     return true;
   }
 
-  const learnableMoves = new Set(
-    (payload.moves || [])
-      .filter((entry) =>
-        (entry.version_group_details || []).some(
-          (detail) => detail?.version_group?.name === versionGroup
-        )
-      )
-      .map((entry) => entry?.move?.name)
-      .filter(Boolean)
-  );
+  const learnableMoves = collectLearnableMoves(payload, versionGroup, moveLearnsets);
 
   const evaluations = moveNames.map((moveName) => learnableMoves.has(moveName));
   return operator === "or" ? evaluations.some(Boolean) : evaluations.every(Boolean);
