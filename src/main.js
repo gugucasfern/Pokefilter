@@ -23,9 +23,47 @@ import { normalizeApiName } from "./utils/normalize.js";
 const filterPanel = document.querySelector("#filter-panel");
 const statusPanel = document.querySelector("#status-panel");
 const resultsPanel = document.querySelector("#results-panel");
+const themeToggle = document.querySelector("#theme-toggle");
 
 if (!filterPanel || !statusPanel || !resultsPanel) {
   throw new Error("App root elements are missing from index.html.");
+}
+
+bootstrapTheme();
+
+function bootstrapTheme() {
+  const stored = window.localStorage.getItem("theme");
+  const theme = stored === "light" ? "light" : "dark";
+
+  applyTheme(theme);
+
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const next =
+        document.body.getAttribute("data-theme") === "dark"
+          ? "light"
+          : "dark";
+      applyTheme(next);
+    });
+  }
+}
+
+function applyTheme(theme) {
+  document.body.setAttribute("data-theme", theme);
+  if (themeToggle) {
+    themeToggle.setAttribute("data-current-theme", theme);
+    const label = theme === "dark" ? "Day mode" : "Night mode";
+    const textEl = themeToggle.querySelector(".theme-toggle-text");
+
+    if (textEl) {
+      textEl.textContent = label;
+    }
+  }
+  try {
+    window.localStorage.setItem("theme", theme);
+  } catch {
+    // ignore storage errors
+  }
 }
 
 const cache = createCache({

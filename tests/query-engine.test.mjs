@@ -563,7 +563,7 @@ test("applies Pokemon Champions move learnset overrides", async () => {
   assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["toxapex"]);
 });
 
-test("matches Pokemon Champions custom forms across ability, type and move filters", async () => {
+test("does not invent Pokemon Champions forms that are missing from PokeAPI", async () => {
   const api = createMockApi({
     abilities: {
       "mold-breaker": [],
@@ -615,9 +615,8 @@ test("matches Pokemon Champions custom forms across ability, type and move filte
     { api }
   );
 
-  assert.equal(result.status.tone, "info");
-  assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["mega-emboar"]);
-  assert.deepEqual(result.results[0].abilities, ["mold-breaker"]);
+  assert.equal(result.status.tone, "warning");
+  assert.deepEqual(result.results.map((pokemon) => pokemon.name), []);
 });
 
 function createMockApi({

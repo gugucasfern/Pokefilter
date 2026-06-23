@@ -4,13 +4,6 @@ import {
   collectLearnableMoves,
   getCustomMoveCandidates,
 } from "./move-learnsets.js";
-import {
-  getCustomNamesForAbility,
-  getCustomNamesForMove,
-  getCustomNamesForType,
-  getCustomPokemonNames,
-  resolveCustomPokemonPayload,
-} from "./custom-pokemon.js";
 import { APP_CONFIG, getMoveLearnsetLabel } from "../config.js";
 import { formatStatLabel, humanizeKebabCase } from "../utils/normalize.js";
 
@@ -18,7 +11,7 @@ const DEFAULT_BATCH_CONCURRENCY = 8;
 
 export async function runSearch(
   query,
-  { api, signal, onProgress, moveLearnsets, customPokemonForms } = {}
+  { api, signal, onProgress, moveLearnsets } = {}
 ) {
   const versionGroup = query.moveVersionGroup || APP_CONFIG.defaultVersionGroup;
   const versionGroupLabel = getMoveLearnsetLabel(versionGroup);
@@ -40,10 +33,7 @@ export async function runSearch(
         signal,
         onProgress,
         fetchResource: (name, options) => api.getAbility(name, options),
-        extractNames: (payload, abilityName) => [
-          ...payload.pokemon.map((entry) => entry.pokemon.name),
-          ...getCustomNamesForAbility(abilityName, versionGroup, customPokemonForms),
-        ],
+        extractNames: (payload) => payload.pokemon.map((entry) => entry.pokemon.name),
       })
     );
   }
@@ -57,10 +47,7 @@ export async function runSearch(
         signal,
         onProgress,
         fetchResource: (name, options) => api.getType(name, options),
-        extractNames: (payload, typeName) => [
-          ...payload.pokemon.map((entry) => entry.pokemon.name),
-          ...getCustomNamesForType(typeName, versionGroup, customPokemonForms),
-        ],
+        extractNames: (payload) => payload.pokemon.map((entry) => entry.pokemon.name),
       })
     );
   }
@@ -81,14 +68,6 @@ export async function runSearch(
             moveLearnsets
           );
           const names = new Set(payload.learned_by_pokemon.map((entry) => entry.name));
-
-          for (const name of getCustomNamesForMove(
-            moveName,
-            versionGroup,
-            customPokemonForms
-          )) {
-            names.add(name);
-          }
 
           for (const name of customCandidates.added) {
             names.add(name);
@@ -192,8 +171,6 @@ export async function runSearch(
     candidateNames = await listAllPokemonNames({
       api,
       signal,
-      versionGroup,
-      customPokemonForms,
     });
   }
 
@@ -209,8 +186,6 @@ export async function runSearch(
     api,
     signal,
     onProgress,
-    versionGroup,
-    customPokemonForms,
   });
 
   const candidatePayloads = matchedSpeciesNameSet
@@ -386,19 +361,13 @@ async function resolveGroupSet({
   };
 }
 
-async function listAllPokemonNames({ api, signal, versionGroup, customPokemonForms }) {
+async function listAllPokemonNames({ api, signal }) {
   const summary = await api.listPokemon(1, { signal });
   const completeIndex = await api.listPokemon(summary.count, { signal });
-  return [
-    ...completeIndex.results.map((entry) => entry.name),
-    ...getCustomPokemonNames(versionGroup, customPokemonForms),
-  ];
+  return completeIndex.results.map((entry) => entry.name);
 }
 
-async function fetchPokemonBatch(
-  names,
-  { api, signal, onProgress, versionGroup, customPokemonForms }
-) {
+async function fetchPokemonBatch(names, { api, signal, onProgress }) {
   const results = new Array(names.length);
   const workerCount = Math.min(DEFAULT_BATCH_CONCURRENCY, names.length);
   let nextIndex = 0;
@@ -413,11 +382,7 @@ async function fetchPokemonBatch(
       const currentIndex = nextIndex;
       nextIndex += 1;
 
-      const payload =
-        (await resolveCustomPokemonPayload(names[currentIndex], versionGroup, {
-          api,
-          customPokemonForms,
-        })) || (await api.getPokemon(names[currentIndex], { signal }));
+      const payload = await api.getPokemon(names[currentIndex], { signal });
       results[currentIndex] = payload;
       completed += 1;
 

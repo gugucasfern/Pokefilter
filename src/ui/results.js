@@ -91,7 +91,7 @@ export function renderResults(container, state) {
       <h3>Build a targeted search</h3>
       <p>
         Add abilities, moves, types or stat rules, then click Search to load a
-        proper database-style listing of the matching Pokemon, including egg groups.
+        focused results table of the matching Pokemon, including egg groups.
       </p>
     </div>
   `;
