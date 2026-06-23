@@ -4,7 +4,12 @@ import {
   collectLearnableMoves,
   getCustomMoveCandidates,
 } from "./move-learnsets.js";
-import { APP_CONFIG, getMoveLearnsetLabel } from "../config.js";
+import {
+  APP_CONFIG,
+  VERSION_GROUP_VERSION_NAMES,
+  getGameAvailabilityLabel,
+  getMoveLearnsetLabel,
+} from "../config.js";
 import { formatStatLabel, humanizeKebabCase } from "../utils/normalize.js";
 
 const DEFAULT_BATCH_CONCURRENCY = 8;
@@ -188,9 +193,15 @@ export async function runSearch(
     onProgress,
   });
 
-  const candidatePayloads = matchedSpeciesNameSet
+  const speciesMatchedPayloads = matchedSpeciesNameSet
     ? pokemonPayloads.filter((payload) => matchedSpeciesNameSet.has(payload?.species?.name))
     : pokemonPayloads;
+  const candidatePayloads = speciesMatchedPayloads.filter((payload) =>
+    matchesGameAvailability(
+      payload,
+      query.gameAvailability || APP_CONFIG.defaultGameAvailability
+    )
+  );
 
   const moveMatchedPayloads = candidatePayloads.filter((payload) =>
     matchesMoveRules(payload, query.moves, query.operators.moves, versionGroup, moveLearnsets)
@@ -248,6 +259,12 @@ export async function runSearch(
 
 export function buildQueryPreview(query) {
   const sections = [];
+  const gameAvailability =
+    query.gameAvailability || APP_CONFIG.defaultGameAvailability;
+
+  if (gameAvailability !== APP_CONFIG.defaultGameAvailability) {
+    sections.push(`Availability: ${getGameAvailabilityLabel(gameAvailability)}`);
+  }
 
   if (query.abilities.length > 0) {
     sections.push(
@@ -529,6 +546,30 @@ function matchesMoveRules(payload, moveNames, operator, versionGroup, moveLearns
 
   const evaluations = moveNames.map((moveName) => learnableMoves.has(moveName));
   return operator === "or" ? evaluations.some(Boolean) : evaluations.every(Boolean);
+}
+
+function matchesGameAvailability(payload, gameAvailability) {
+  if (gameAvailability === APP_CONFIG.defaultGameAvailability) {
+    return true;
+  }
+
+  const hasMoveVersionGroup = (payload.moves || []).some((entry) =>
+    (entry.version_group_details || []).some(
+      (detail) => detail?.version_group?.name === gameAvailability
+    )
+  );
+
+  if (hasMoveVersionGroup) {
+    return true;
+  }
+
+  const allowedVersions = new Set(
+    VERSION_GROUP_VERSION_NAMES[gameAvailability] || []
+  );
+
+  return (payload.game_indices || []).some((entry) =>
+    allowedVersions.has(entry?.version?.name)
+  );
 }
 
 function compareStat(currentValue, operator, targetValue) {

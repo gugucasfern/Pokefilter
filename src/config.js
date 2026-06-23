@@ -5,6 +5,7 @@ export const APP_CONFIG = {
   cacheVersion: "v3",
   draftStorageKey: "dexquery:query-draft",
   defaultVersionGroup: "scarlet-violet",
+  defaultGameAvailability: "any",
 };
 
 export const TYPE_OPTIONS = [
@@ -74,6 +75,30 @@ export function getMoveLearnsetLabel(value) {
     value
   );
 }
+
+export const GAME_AVAILABILITY_OPTIONS = [
+  { value: "any", label: "Any" },
+  ...MOVE_LEARNSET_OPTIONS.filter((option) => option.value !== "pokemon-champions"),
+];
+
+export function getGameAvailabilityLabel(value) {
+  return (
+    GAME_AVAILABILITY_OPTIONS.find((option) => option.value === value)?.label ||
+    value
+  );
+}
+
+export const VERSION_GROUP_VERSION_NAMES = {
+  "red-blue": ["red", "blue"],
+  "gold-silver": ["gold", "silver"],
+  "ruby-sapphire": ["ruby", "sapphire"],
+  "diamond-pearl": ["diamond", "pearl"],
+  "black-white": ["black", "white"],
+  "x-y": ["x", "y"],
+  "sun-moon": ["sun", "moon"],
+  "sword-shield": ["sword", "shield"],
+  "scarlet-violet": ["scarlet", "violet"],
+};
 
 export const STAT_OPTIONS = [
   { value: "hp", label: "HP" },

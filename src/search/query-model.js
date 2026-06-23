@@ -1,6 +1,7 @@
 import {
   APP_CONFIG,
   COMPARISON_OPERATORS,
+  GAME_AVAILABILITY_OPTIONS,
   LOGICAL_OPERATORS,
   MOVE_LEARNSET_OPTIONS,
   STAT_OPTIONS,
@@ -12,6 +13,9 @@ const allowedLogicalOperators = new Set(LOGICAL_OPERATORS);
 const allowedComparisonOperators = new Set(COMPARISON_OPERATORS);
 const allowedMoveLearnsets = new Set(
   MOVE_LEARNSET_OPTIONS.map((option) => option.value)
+);
+const allowedGameAvailability = new Set(
+  GAME_AVAILABILITY_OPTIONS.map((option) => option.value)
 );
 
 export function createRuleId() {
@@ -35,6 +39,7 @@ export function createStatRule(overrides = {}) {
 export function createEmptyQuery() {
   return {
     abilities: [],
+    gameAvailability: APP_CONFIG.defaultGameAvailability,
     types: [],
     moves: [],
     moveVersionGroup: APP_CONFIG.defaultVersionGroup,
@@ -53,6 +58,7 @@ export function createEmptyQuery() {
 export function hydrateQueryDraft(draft = {}) {
   return {
     abilities: sanitizeTokenGroup(draft.abilities),
+    gameAvailability: sanitizeGameAvailability(draft.gameAvailability),
     types: sanitizeTokenGroup(draft.types),
     moves: sanitizeTokenGroup(draft.moves),
     moveVersionGroup: sanitizeMoveLearnset(draft.moveVersionGroup),
@@ -111,6 +117,12 @@ function sanitizeLogicalOperator(operator) {
 
 function sanitizeMoveLearnset(value) {
   return allowedMoveLearnsets.has(value) ? value : APP_CONFIG.defaultVersionGroup;
+}
+
+function sanitizeGameAvailability(value) {
+  return allowedGameAvailability.has(value)
+    ? value
+    : APP_CONFIG.defaultGameAvailability;
 }
 
 function sanitizeStatRules(values) {

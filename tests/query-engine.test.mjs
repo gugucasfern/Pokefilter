@@ -133,6 +133,74 @@ test("supports OR logic inside a filter group", async () => {
   ]);
 });
 
+test("filters official game availability using PokeAPI version-group data", async () => {
+  const api = createMockApi({
+    types: {
+      fire: ["blaziken", "combusken"],
+      fighting: ["blaziken", "combusken"],
+    },
+    pokemon: {
+      blaziken: createPokemonPayload({
+        id: 257,
+        name: "blaziken",
+        types: ["fire", "fighting"],
+        abilities: ["blaze", "speed-boost"],
+        moves: {
+          protect: ["scarlet-violet"],
+        },
+        stats: defaultStats({ attack: 120, speed: 80 }),
+      }),
+      combusken: createPokemonPayload({
+        id: 256,
+        name: "combusken",
+        types: ["fire", "fighting"],
+        abilities: ["blaze", "speed-boost"],
+        moves: {
+          protect: ["ruby-sapphire"],
+        },
+        stats: defaultStats({ attack: 85, speed: 55 }),
+      }),
+    },
+    species: {
+      blaziken: createSpeciesPayload({
+        id: 257,
+        name: "blaziken",
+        eggGroups: ["field"],
+        varieties: ["blaziken"],
+      }),
+      combusken: createSpeciesPayload({
+        id: 256,
+        name: "combusken",
+        eggGroups: ["field"],
+        varieties: ["combusken"],
+      }),
+    },
+  });
+
+  const result = await runSearch(
+    {
+      abilities: [],
+      gameAvailability: "scarlet-violet",
+      types: ["fire", "fighting"],
+      moves: [],
+      moveVersionGroup: "scarlet-violet",
+      eggGroups: [],
+      stats: [],
+      operators: {
+        abilities: "and",
+        types: "and",
+        moves: "and",
+        eggGroups: "and",
+        stats: "and",
+      },
+    },
+    { api }
+  );
+
+  assert.equal(result.status.tone, "info");
+  assert.deepEqual(result.results.map((pokemon) => pokemon.name), ["blaziken"]);
+});
+
 test("returns a warning when a filter value does not exist", async () => {
   const api = createMockApi();
 

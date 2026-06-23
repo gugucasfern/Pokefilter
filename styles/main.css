@@ -200,6 +200,10 @@ code {
   border-bottom: 1px solid var(--line);
 }
 
+.compact-filter-group {
+  padding-top: 0;
+}
+
 .filter-group:last-child {
   border-bottom: 0;
 }
@@ -449,6 +453,10 @@ code {
 
 .learnset-select {
   max-width: 18rem;
+}
+
+.game-availability-select {
+  max-width: 16rem;
 }
 
 .field-select.operator-select,

@@ -118,6 +118,13 @@ const actions = {
     }));
   },
 
+  setGameAvailability(gameAvailability) {
+    updateQuery((query) => ({
+      ...query,
+      gameAvailability,
+    }));
+  },
+
   setOperator(group, operator) {
     updateQuery((query) => ({
       ...query,

@@ -1,5 +1,6 @@
 import {
   COMPARISON_OPERATORS,
+  GAME_AVAILABILITY_OPTIONS,
   MOVE_LEARNSET_OPTIONS,
   STAT_OPTIONS,
 } from "../config.js";
@@ -199,6 +200,11 @@ export function bindFilters(container, actions) {
       return;
     }
 
+    if (target.dataset.setting === "game-availability") {
+      actions.setGameAvailability(target.value);
+      return;
+    }
+
     const ruleId = target.dataset.ruleId;
     const field = target.dataset.field;
 
@@ -222,6 +228,7 @@ export function renderFilters(container, state) {
 
   container.innerHTML = `
     <div class="filters-shell">
+      ${renderGameAvailabilityControl(query.gameAvailability, isDisabled)}
       ${renderTokenGroup("abilities", query, isDisabled)}
       ${renderTokenGroup("types", query, isDisabled)}
       ${renderTokenGroup("moves", query, isDisabled)}
@@ -245,6 +252,30 @@ export function renderFilters(container, state) {
 
       ${renderSuggestionSources(suggestions)}
     </div>
+  `;
+}
+
+function renderGameAvailabilityControl(selectedValue, isDisabled) {
+  return `
+    <section class="filter-group compact-filter-group">
+      <div class="group-subcontrols">
+        <label class="field-label" for="game-availability">Game availability</label>
+        <select
+          id="game-availability"
+          class="field-select game-availability-select"
+          data-setting="game-availability"
+          ${isDisabled ? "disabled" : ""}
+        >
+          ${GAME_AVAILABILITY_OPTIONS.map(
+            (option) => `
+              <option value="${option.value}" ${selectedValue === option.value ? "selected" : ""}>
+                ${escapeHtml(option.label)}
+              </option>
+            `
+          ).join("")}
+        </select>
+      </div>
+    </section>
   `;
 }
 
