@@ -21,10 +21,7 @@ const groupPlaceholders = {
 };
 
 const groupDescriptions = {
-  abilities: "Use OR when one of several abilities is acceptable.",
-  types: "Keep AND for dual-type requirements. Switch to OR for wider matching.",
   moves: "Moves are matched by the learnset version you choose, regardless of how the Pokemon learns them.",
-  eggGroups: "Egg groups are matched at species level, so every form of a matching species is included.",
 };
 
 const MAX_SUGGESTIONS = 6;
@@ -232,13 +229,6 @@ export function renderFilters(container, state) {
       ${renderStatsGroup(query, isDisabled)}
 
       <section class="filter-group">
-        <div class="group-head">
-          <div>
-            <h3>Actions</h3>
-            <p>Search runs only when you click the button, matching the planned product behavior.</p>
-          </div>
-        </div>
-
         <div class="button-row">
           <button class="primary-button" type="button" data-action="search" ${
             isDisabled ? "disabled" : ""
@@ -267,7 +257,7 @@ function renderTokenGroup(group, query, isDisabled) {
       <div class="group-head">
         <div>
           <h3>${groupLabels[group]}</h3>
-          <p>${groupDescriptions[group]}</p>
+          ${groupDescriptions[group] ? `<p>${groupDescriptions[group]}</p>` : ""}
         </div>
         ${renderOperatorToggle(group, operator, isDisabled)}
       </div>
@@ -287,7 +277,7 @@ function renderTokenGroup(group, query, isDisabled) {
           />
           <div class="autocomplete-panel" data-role="autocomplete-panel"></div>
         </div>
-        <button class="ghost-button" type="button" data-action="add-token" ${
+        <button class="ghost-button neutral-add-button" type="button" data-action="add-token" ${
           isDisabled ? "disabled" : ""
         }>
           Add
@@ -380,7 +370,6 @@ function renderStatsGroup(query, isDisabled) {
       <div class="group-head">
         <div>
           <h3>Base Stats</h3>
-          <p>Add numeric rules like speed &gt;= 60, then decide whether they combine with AND or OR.</p>
         </div>
         ${renderOperatorToggle("stats", query.operators.stats, isDisabled)}
       </div>
@@ -394,7 +383,7 @@ function renderStatsGroup(query, isDisabled) {
       </div>
 
       <div class="group-input-row">
-        <button class="ghost-button" type="button" data-action="add-stat-rule" ${
+        <button class="ghost-button neutral-add-button" type="button" data-action="add-stat-rule" ${
           isDisabled ? "disabled" : ""
         }>
           Add stat rule
@@ -535,10 +524,8 @@ function clearAutocomplete(panel) {
 
 function getClosestSuggestions(input) {
   const query = String(input.value || "").trim().toLowerCase();
-
-  if (!query) {
-    return [];
-  }
+  const panel = input.closest("[data-group-panel]");
+  const isEggGroupInput = panel?.dataset.group === "eggGroups";
 
   const sourceList = input.dataset.suggestionsId
     ? document.getElementById(input.dataset.suggestionsId)
@@ -548,11 +535,18 @@ function getClosestSuggestions(input) {
     return [];
   }
 
-  return [...sourceList.options]
+  if (!query && !isEggGroupInput) {
+    return [];
+  }
+
+  const suggestions = [...sourceList.options]
     .map((option) => option.value)
-    .filter((value) => value.toLowerCase().includes(query))
-    .sort((left, right) => compareSuggestions(left, right, query))
-    .slice(0, MAX_SUGGESTIONS);
+    .filter((value) => !query || value.toLowerCase().includes(query))
+    .sort((left, right) =>
+      query ? compareSuggestions(left, right, query) : left.localeCompare(right)
+    );
+
+  return isEggGroupInput ? suggestions : suggestions.slice(0, MAX_SUGGESTIONS);
 }
 
 function compareSuggestions(left, right, query) {
